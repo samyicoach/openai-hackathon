@@ -5,6 +5,7 @@ import { useStore } from "@/lib/store";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 
 export default function NewProductPage() {
   const { setDraftProduct, setDraftTargeting, draftProduct, draftTargeting, clearDraft } =
@@ -57,9 +58,7 @@ export default function NewProductPage() {
     objective: "Awareness",
   };
   const [step, setStep] = useState<"details" | "targeting">("details");
-  const [transitionLoading, setTransitionLoading] = useState<null | "targeting" | "sentiment">(
-    null
-  );
+  const [transitionLoading, setTransitionLoading] = useState<null | "targeting">(null);
   const [form, setForm] = useState(initialForm);
   const [targetingInputs, setTargetingInputs] = useState(initialTargetingInputs);
 
@@ -177,7 +176,7 @@ export default function NewProductPage() {
   ];
   const briefQualityScore = briefQualityItems.filter((item) => item.passed).length;
 
-  const runMockGeneration = (mode: "targeting" | "sentiment", onComplete: () => void) => {
+  const runMockGeneration = (mode: "targeting", onComplete: () => void) => {
     setTransitionLoading(mode);
     window.setTimeout(() => {
       onComplete();
@@ -777,7 +776,7 @@ export default function NewProductPage() {
             <button
               className="btn dark"
               onClick={() => {
-                runMockGeneration("sentiment", () => {
+                flushSync(() => {
                   setDraftProduct({
                     name: form.name,
                     category: form.category,
@@ -787,8 +786,8 @@ export default function NewProductPage() {
                     description: form.description,
                   });
                   setDraftTargeting(targetingInputs);
-                  router.push("/products/new/sentiment");
                 });
+                router.push("/products/new/sentiment");
               }}
             >
               Next → Sentiment Analysis
