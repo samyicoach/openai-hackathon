@@ -92,7 +92,6 @@ export default function ProductSentimentPage() {
   const { draftProduct, draftTargeting, createProduct, clearDraft } = useStore();
   const router = useRouter();
   const [isGenerating, setIsGenerating] = useState(true);
-  const [phaseIndex, setPhaseIndex] = useState(0);
 
   const summary = useMemo(
     () => buildSentimentSummary(draftProduct?.brandTone, draftProduct?.category),
@@ -105,17 +104,10 @@ export default function ProductSentimentPage() {
       return;
     }
     setIsGenerating(true);
-    setPhaseIndex(0);
-    const intervalId = window.setInterval(() => {
-      setPhaseIndex((prev) => Math.min(prev + 1, 2));
-    }, 500);
     const timeoutId = window.setTimeout(() => {
-      window.clearInterval(intervalId);
       setIsGenerating(false);
-      setPhaseIndex(2);
     }, 1700);
     return () => {
-      window.clearInterval(intervalId);
       window.clearTimeout(timeoutId);
     };
   }, [draftProduct, draftTargeting]);
@@ -140,11 +132,6 @@ export default function ProductSentimentPage() {
   }
 
   if (isGenerating) {
-    const phases = [
-      "Aggregating source sentiment signals",
-      "Calculating segment confidence and risk",
-      "Producing sentiment recommendations",
-    ];
     return (
       <AppShell
         title="Sentiment Review"
@@ -152,25 +139,11 @@ export default function ProductSentimentPage() {
         active="Products"
         actions={null}
       >
-        <section className="section">
-          <div className="loading-panel">
-            <div className="loading-orbit" />
-            <h2>Analyzing Sentiment Signals</h2>
-            <p>Running mock model inference to simulate backend AI processing.</p>
-            <div className="loading-steps">
-              {phases.map((phase, index) => (
-                <div
-                  key={phase}
-                  className={`loading-step ${
-                    index < phaseIndex ? "done" : index === phaseIndex ? "active" : ""
-                  }`}
-                >
-                  {index < phaseIndex ? "Done" : index === phaseIndex ? "Running" : "Queued"} · {phase}
-                </div>
-              ))}
-            </div>
+        <div className="loader-only">
+          <div className="loading-line">
+            <span />
           </div>
-        </section>
+        </div>
       </AppShell>
     );
   }

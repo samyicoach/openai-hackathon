@@ -7,9 +7,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function NewProductPage() {
-  const { setDraftProduct, setDraftTargeting, draftProduct, draftTargeting } = useStore();
+  const { setDraftProduct, setDraftTargeting, draftProduct, draftTargeting, clearDraft } =
+    useStore();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const stepParam = searchParams.get("step");
   const productCategories = [
     "Apparel & Accessories",
     "Electronics",
@@ -21,22 +23,17 @@ export default function NewProductPage() {
     "Finance & Insurance",
   ];
   const currencies = ["USD", "EUR", "GBP", "JPY", "CAD", "AUD"];
-  const [step, setStep] = useState<"details" | "targeting">("details");
-  const [transitionLoading, setTransitionLoading] = useState<null | "targeting" | "sentiment">(
-    null
-  );
-  const [transitionPhase, setTransitionPhase] = useState(0);
-  const [form, setForm] = useState({
+  const initialForm = {
     name: "",
-    category: "Apparel & Accessories",
+    category: "",
     priceCurrency: "USD",
     priceMin: "",
     priceMax: "",
     launchDate: "",
-    brandTone: "Professional",
+    brandTone: "",
     description: "",
-  });
-  const [targetingInputs, setTargetingInputs] = useState({
+  };
+  const initialTargetingInputs = {
     ageMin: "24",
     ageMax: "44",
     genders: ["All"],
@@ -58,41 +55,57 @@ export default function NewProductPage() {
     excludedKeywords: "free, cheap, discount",
     frequencyCap: "3 per day",
     objective: "Awareness",
-  });
+  };
+  const [step, setStep] = useState<"details" | "targeting">("details");
+  const [transitionLoading, setTransitionLoading] = useState<null | "targeting" | "sentiment">(
+    null
+  );
+  const [form, setForm] = useState(initialForm);
+  const [targetingInputs, setTargetingInputs] = useState(initialTargetingInputs);
 
   useEffect(() => {
-    if (draftProduct) {
-      const priceParts = draftProduct.priceRange.match(
-        /^([A-Z]{3})\s+(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)$/
-      );
-      setForm((prev) => ({
-        ...prev,
-        name: draftProduct.name,
-        category: draftProduct.category,
-        launchDate: draftProduct.launchDate,
-        brandTone: draftProduct.brandTone ?? prev.brandTone,
-        description: draftProduct.description ?? prev.description,
-        priceCurrency: priceParts?.[1] ?? prev.priceCurrency,
-        priceMin: priceParts?.[2] ?? prev.priceMin,
-        priceMax: priceParts?.[3] ?? prev.priceMax,
-      }));
+    const returnToTargeting = stepParam === "targeting";
+    if (returnToTargeting) {
+      setStep("targeting");
+      return;
     }
-  }, [draftProduct]);
+    setStep("details");
+    setForm(initialForm);
+    setTargetingInputs(initialTargetingInputs);
+    clearDraft();
+  }, [stepParam, clearDraft]);
 
   useEffect(() => {
-    if (draftTargeting) {
+    const returnToTargeting = stepParam === "targeting";
+    if (!returnToTargeting || !draftProduct) {
+      return;
+    }
+    const priceParts = draftProduct.priceRange.match(
+      /^([A-Z]{3})\s+(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)$/
+    );
+    setForm((prev) => ({
+      ...prev,
+      name: draftProduct.name,
+      category: draftProduct.category,
+      launchDate: draftProduct.launchDate,
+      brandTone: draftProduct.brandTone ?? prev.brandTone,
+      description: draftProduct.description ?? prev.description,
+      priceCurrency: priceParts?.[1] ?? prev.priceCurrency,
+      priceMin: priceParts?.[2] ?? prev.priceMin,
+      priceMax: priceParts?.[3] ?? prev.priceMax,
+    }));
+    setStep("targeting");
+  }, [stepParam, draftProduct]);
+
+  useEffect(() => {
+    const returnToTargeting = stepParam === "targeting";
+    if (returnToTargeting && draftTargeting) {
       setTargetingInputs((prev) => ({
         ...prev,
         ...draftTargeting,
       }));
     }
-  }, [draftTargeting]);
-
-  useEffect(() => {
-    if (searchParams.get("step") === "targeting") {
-      setStep("targeting");
-    }
-  }, [searchParams]);
+  }, [stepParam, draftTargeting]);
 
   const descriptionText = form.description.toLowerCase();
   const descriptionWords = descriptionText.trim()
@@ -164,38 +177,11 @@ export default function NewProductPage() {
   ];
   const briefQualityScore = briefQualityItems.filter((item) => item.passed).length;
 
-  const loadingScenarios = {
-    targeting: {
-      title: "Generating Targeting",
-      subtitle: "Evaluating product, audience, and channel signals.",
-      phases: [
-        "Parsing product inputs",
-        "Modeling segment relevance",
-        "Building targeting defaults",
-      ],
-    },
-    sentiment: {
-      title: "Generating Sentiment Insights",
-      subtitle: "Estimating confidence and segment perception signals.",
-      phases: [
-        "Collecting behavior and mention signals",
-        "Scoring segment-level sentiment",
-        "Preparing recommendations",
-      ],
-    },
-  } as const;
-
   const runMockGeneration = (mode: "targeting" | "sentiment", onComplete: () => void) => {
     setTransitionLoading(mode);
-    setTransitionPhase(0);
-    const intervalId = window.setInterval(() => {
-      setTransitionPhase((prev) => Math.min(prev + 1, 2));
-    }, 450);
     window.setTimeout(() => {
-      window.clearInterval(intervalId);
       onComplete();
       setTransitionLoading(null);
-      setTransitionPhase(0);
     }, 1500);
   };
 
@@ -281,29 +267,11 @@ export default function NewProductPage() {
       }
     >
       {transitionLoading ? (
-        <section className="section">
-          <div className="loading-panel">
-            <div className="loading-orbit" />
-            <h2>{loadingScenarios[transitionLoading].title}</h2>
-            <p>{loadingScenarios[transitionLoading].subtitle}</p>
-            <div className="loading-steps">
-              {loadingScenarios[transitionLoading].phases.map((phase, index) => (
-                <div
-                  key={phase}
-                  className={`loading-step ${
-                    index < transitionPhase
-                      ? "done"
-                      : index === transitionPhase
-                        ? "active"
-                        : ""
-                  }`}
-                >
-                  {index < transitionPhase ? "Done" : index === transitionPhase ? "Running" : "Queued"} · {phase}
-                </div>
-              ))}
-            </div>
+        <div className="loader-only">
+          <div className="loading-line">
+            <span />
           </div>
-        </section>
+        </div>
       ) : step === "details" ? (
         <section className="section">
           <div className="section-header">
@@ -329,6 +297,9 @@ export default function NewProductPage() {
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
               >
+                <option value="" disabled>
+                  Select category
+                </option>
                 {productCategories.map((category) => (
                   <option key={category} value={category}>
                     {category}

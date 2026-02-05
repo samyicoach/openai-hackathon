@@ -46,12 +46,15 @@ body {
   }
 }
 
-@keyframes orbitSpin {
-  from {
-    transform: rotate(0deg);
+@keyframes loaderSlide {
+  0% {
+    transform: translateX(-120%);
   }
-  to {
-    transform: rotate(360deg);
+  50% {
+    transform: translateX(60%);
+  }
+  100% {
+    transform: translateX(220%);
   }
 }
 
@@ -60,8 +63,10 @@ body {
     animation: none;
   }
 
-  .loading-orbit {
+  .loading-line span {
     animation: none;
+    transform: translateX(0);
+    width: 100%;
   }
 }
 
@@ -712,14 +717,43 @@ textarea {
   font-size: 13px;
 }
 
-.loading-orbit {
-  width: 36px;
-  height: 36px;
+.loading-minimal {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  width: min(280px, 100%);
+  margin: 36px auto;
+}
+
+.loading-label {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: var(--font-mono), monospace;
+}
+
+.loading-line {
+  width: min(240px, 80%);
+  height: 4px;
   border-radius: 999px;
-  border: 3px solid #ececec;
-  border-top-color: #111111;
-  margin: 0 auto;
-  animation: orbitSpin 0.9s linear infinite;
+  background: #ececec;
+  overflow: hidden;
+}
+
+.loading-line span {
+  display: block;
+  width: 34%;
+  height: 100%;
+  border-radius: 999px;
+  background: #111111;
+  animation: loaderSlide 1.05s ease-in-out infinite;
+}
+
+.loader-only {
+  min-height: min(340px, 55vh);
+  display: grid;
+  place-items: center;
 }
 
 .loading-steps {
